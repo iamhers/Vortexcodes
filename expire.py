@@ -25,7 +25,7 @@ def check_expiry(user_id, csv_data):
                 exit()  
             else:
                 remaining_time = expiry_date - current_time
-                print(f"\033[92m✅ The code is still valid. Time remaining: {remaining_time}\033[0m")
+                print(f"{orange}✅ The code is still valid. Time remaining: {remaining_time}\033[0m")
                 return
     print("\033[91m⚠️ User ID not found in database.\033[0m")
     exit()
