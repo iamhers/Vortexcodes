@@ -42,11 +42,11 @@ def check_expiry(user_id, csv_data):
                 return
 
     if all_users_allowed:
-        print("\033[92m✅ Access granted to all users.\033[0m")
+        print(f"\033[92m✅ The code is still valid. Time remaining: {remaining_time}\033[0m")
         return
 
     if not user_found:
-        print("\033[91m⚠️ User ID not found in database. Exiting...\033[0m")
+        print("\033[91m⚠️ User ID not found in database. Exiting...Please contact our Developer to use this tool.\033[0m")
         exit()
 
 csv_content = fetch_csv(CSV_URL)
