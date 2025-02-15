@@ -42,6 +42,7 @@ def check_expiry(user_id, csv_data):
                 return
 
     if all_users_allowed:
+        remaining_time = expiry_date - current_time
         print(f"\033[92m✅ The code is still valid. Time remaining: {remaining_time}\033[0m")
         return
 
