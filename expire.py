@@ -5,6 +5,13 @@ import sys
 import time
 from datetime import datetime
 
+# ANSI color codes
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+RESET = "\033[0m"  # Reset color to default
+
 CSV_URL = "https://raw.githubusercontent.com/jaikshaikh/Vortexcodes/refs/heads/main/expiry_list.csv"
 USER_ID = str(ID)  # Replace ID with actual variable or input
 
@@ -23,7 +30,7 @@ def fetch_csv(url):
         response.raise_for_status()  
         return response.text
     except requests.exceptions.RequestException as e:
-        live_text("\033[91m🚨 Error fetching CSV:\033[0m " + str(e))
+        live_text(f"{RED}🚨 Error fetching CSV:{RESET} {e}")
         return None
 
 def check_expiry(user_id, csv_data):
@@ -41,7 +48,7 @@ def check_expiry(user_id, csv_data):
             try:
                 expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                live_text("\033[91m🚨 Error: Invalid date format in CSV!\033[0m")
+                live_text(f"{RED}🚨 Error: Invalid date format in CSV!{RESET}")
                 return
             break
         elif row[0] == user_id:
@@ -49,31 +56,31 @@ def check_expiry(user_id, csv_data):
             try:
                 expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                live_text("\033[91m🚨 Error: Invalid date format in CSV!\033[0m")
+                live_text(f"{RED}🚨 Error: Invalid date format in CSV!{RESET}")
                 return
 
             current_time = datetime.now()
             if current_time > expiry_date:
-                live_text("\033[91m⏳ Your access has expired! Please contact the developer for more time.\033[0m")
-                live_text("\033[93m📩 Contact:\033[0m https://t.me/Vortexcodez")
+                live_text(f"{RED}⏳ Your access has expired! Please contact the developer for more time.{RESET}")
+                live_text(f"{YELLOW}📩 Contact:{RESET} https://t.me/Vortexcodez")
                 webbrowser.open("https://t.me/Vortexcodez")
             else:
                 remaining_time = expiry_date - current_time
-                live_text(f"\033[92m✅ Your access is valid. Time remaining: {remaining_time}\033[0m")
+                live_text(f"{GREEN}✅ Your access is valid. Time remaining: {remaining_time}{RESET}")
             return
 
     if all_users_allowed and expiry_date:
         current_time = datetime.now()
         if current_time > expiry_date:
-            live_text("\033[91m⏳ Your free time is over! Please contact the developer for more time.\033[0m")
+            live_text(f"{RED}⏳ Your free time is over! Please contact the developer for more time.{RESET}")
         else:
             remaining_time = expiry_date - current_time
-            live_text(f"\033[92m✅ Free access is valid. Time remaining: {remaining_time}\033[0m")
+            live_text(f"{GREEN}✅ Free access is valid. Time remaining: {remaining_time}{RESET}")
         return
 
     if not user_found:
-        live_text("\033[91m🚫 You are not authorized! Please contact the developer.\033[0m")
-        live_text("\033[93m📩 Contact:\033[0m https://t.me/Vortexcodez")
+        live_text(f"{RED}🚫 You are not authorized! Please contact the developer.{RESET}")
+        live_text(f"{YELLOW}📩 Contact:{RESET} https://t.me/Vortexcodez")
         webbrowser.open("https://t.me/Vortexcodez")
 
 csv_content = fetch_csv(CSV_URL)
