@@ -21,7 +21,7 @@ def fetch_csv(url):
         response.raise_for_status()  
         return response.text
     except requests.exceptions.RequestException as e:
-        live_text(f"🚨 Error fetching CSV:{RESET} {e}")
+        live_text(f"🚨 Error fetching CSV: {e}")
         return None
 
 def check_expiry(user_id, csv_data):
@@ -39,7 +39,7 @@ def check_expiry(user_id, csv_data):
             try:
                 expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                live_text(f"🚨 Error: Invalid date format in CSV!{RESET}")
+                live_text(f"    🚨 Error: Invalid date format in CSV!")
                 return
             break
         elif row[0] == user_id:
@@ -47,34 +47,34 @@ def check_expiry(user_id, csv_data):
             try:
                 expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                live_text(f"🚨 Error: Invalid date format in CSV!{RESET}")
+                live_text(f"   🚨 Error: Invalid date format in CSV!")
                 return
 
             current_time = datetime.now()
             if current_time > expiry_date:
-                live_text(f"⏳ Your access has expired! Please contact the developer for more time.{RESET}")
-                live_text(f"📩 Contact:{RESET} https://t.me/Vortexcodez")
+                live_text(f"    ⏳ Your access has expired! Please contact the developer for more time.")
+                live_text(f"    📩 Contact: https://t.me/Vortexcodez")
                 webbrowser.open("https://t.me/Vortexcodez")
                 exit()
             else:
                 remaining_time = expiry_date - current_time
-                live_text(f"✅ Your access is valid. Time remaining: {remaining_time}{RESET}")
+                live_text(f"    ✅ Your access is valid. Time remaining: {remaining_time}")
             return
 
     if all_users_allowed and expiry_date:
         current_time = datetime.now()
         if current_time > expiry_date:
-            live_text(f"⏳ Your free time is over! Please contact the developer for more time.{RESET}")
-             webbrowser.open("https://t.me/Vortexcodez")
-        exit()
+            live_text(f"     ⏳ Your free time is over! Please contact the developer for more time.")
+            webbrowser.open("https://t.me/Vortexcodez")
+            exit()
         else:
             remaining_time = expiry_date - current_time
-            live_text(f"✅ Free access is valid. Time remaining: {remaining_time}{RESET}")
+            live_text(f"    ✅ Free access is valid. Time remaining: {remaining_time}")
         return
 
     if not user_found:
-        live_text(f"🚫 You are not authorized! Please contact the developer.{RESET}")
-        live_text(f"📩 Contact:{RESET} https://t.me/Vortexcodez")
+        live_text(f"    🚫 You are not authorized! Please contact the developer.")
+        live_text(f"    📩 Contact: https://t.me/Vortexcodez")
         webbrowser.open("https://t.me/Vortexcodez")
         exit()
 
