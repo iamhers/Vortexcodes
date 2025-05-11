@@ -4,80 +4,75 @@ import webbrowser
 import sys
 import time
 from datetime import datetime
+
 CSV_URL = "https://raw.githubusercontent.com/jaikshaikh/Vortexcodes/refs/heads/main/expiry_list.csv"
-USER_ID = str(ID)  # Replace ID with actual variable or input
+
+try:
+    USER_ID = str(ID)
+except NameError:
+    USER_ID = input("Enter your ID: ").strip()
+
 def live_text(text, delay=0.05):
-    """Prints text character by character with a delay for a typing effect."""
     for char in text:
         sys.stdout.write(char)
         sys.stdout.flush()
         time.sleep(delay)
-    print()  
+    print()
 
 def fetch_csv(url):
-    """Fetches CSV data from a URL."""
     try:
         response = requests.get(url)
-        response.raise_for_status()  
+        response.raise_for_status()
         return response.text
     except requests.exceptions.RequestException as e:
         live_text(f"🚨 Error fetching CSV: {e}")
         return None
 
-def check_expiry(user_id, csv_data):
-    """Checks if the user ID is in the CSV and verifies expiry status."""
-    reader = csv.reader(csv_data.splitlines())
-    next(reader)  # Skip header
+def parse_expiry(date_str):
+    try:
+        return datetime.strptime(date_str.strip(), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        live_text("🚨 Error: Invalid date format in CSV! Expected 'YYYY-MM-DD HH:MM:SS'")
+        return None
 
-    all_users_allowed = False
-    user_found = False
-    expiry_date = None
-
+def check_access(user_id, csv_text):
+    reader = csv.DictReader(csv_text.splitlines())
+    current_time = datetime.now()
+    
     for row in reader:
-        if row[0].lower() == "all":
-            all_users_allowed = True
-            try:
-                expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                live_text(f"    🚨 Error: Invalid date format in CSV!")
-                return
-            break
-        elif row[0] == user_id:
-            user_found = True
-            try:
-                expiry_date = datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                live_text(f"   🚨 Error: Invalid date format in CSV!")
-                return
-
-            current_time = datetime.now()
-            if current_time > expiry_date:
-                live_text(f"    ⏳ Your access has expired! Please contact the developer for more time.")
-                live_text(f"    📩 Contact: https://t.me/Vortexcodez")
-                webbrowser.open("https://t.me/Vortexcodez")
-                exit()
-            else:
-                remaining_time = expiry_date - current_time
-                live_text(f"    ✅ Your access is valid. Time remaining: {remaining_time}")
+        row_id = row.get("id", "").strip().lower()
+        expiry_str = row.get("expiry", "").strip()
+        expiry_date = parse_expiry(expiry_str)
+        if not expiry_date:
             return
 
-    if all_users_allowed and expiry_date:
-        current_time = datetime.now()
-        if current_time > expiry_date:
-            live_text(f"     ⏳ Your free time is over! Please contact the developer for more time.")
-            webbrowser.open("https://t.me/Vortexcodez")
-            exit()
-        else:
-            remaining_time = expiry_date - current_time
-            live_text(f"    ✅ Free access is valid. Time remaining: {remaining_time}")
-        return
+        if row_id == "all":
+            if current_time > expiry_date:
+                deny_access("⏳ Free access expired! Contact developer.")
+            else:
+                time_left(expiry_date)
+            return
 
-    if not user_found:
-        live_text(f"    🚫 You are not authorized! Please contact the developer.")
-        live_text(f"    📩 Contact: https://t.me/Vortexcodez")
-        webbrowser.open("https://t.me/Vortexcodez")
-        exit()
+        if row_id == user_id.lower():
+            if current_time > expiry_date:
+                deny_access("⏳ Your access has expired! Contact developer.")
+            else:
+                time_left(expiry_date)
+            return
 
-csv_content = fetch_csv(CSV_URL)
-if csv_content:
-    check_expiry(USER_ID, csv_content)
+    deny_access("🚫 You are not authorized! Contact developer.")
+
+def time_left(expiry_date):
+    remaining = expiry_date - datetime.now()
+    live_text(f"✅ Access valid. Time remaining: {str(remaining).split('.')[0]}")
+
+def deny_access(message):
+    live_text(f"    {message}")
+    live_text("    📩 Contact: https://t.me/PrayagRajj")
+    webbrowser.open("https://t.me/PrayagRajj")
+    sys.exit()
+
+# Run the main logic
+csv_data = fetch_csv(CSV_URL)
+if csv_data:
+    check_access(USER_ID, csv_data)
