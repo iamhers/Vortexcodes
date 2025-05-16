@@ -11,6 +11,19 @@ CONTACT_URL = "https://t.me/PrayagRajj"
 USE_COLOR = True  # Set to False for plain terminal output
 
 # ==================== Color Helper ====================
+def colorize(text, color):
+    colors = {
+        "red": "\033[91m",
+        "green": "\033[92m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "cyan": "\033[96m",
+        "magenta": "\033[95m",
+        "reset": "\033[0m",
+        "cyan" : "\033[96m"
+    }
+    return f"{colors.get(color, '')}{text}{colors['reset']}"
+
 def colorize(text, color_code):
     return f"\033[{color_code}m{text}\033[0m" if USE_COLOR else text
 
