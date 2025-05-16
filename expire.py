@@ -24,8 +24,7 @@ def live_text(text, delay=0.03):
     print()
 
 # ========== Time Remaining Formatter ==========
-def format_remaining_time(expiry_ist):
-    now_ist = datetime.now(IST)
+def format_remaining_time(expiry_ist, now_ist):
     if expiry_ist <= now_ist:
         return colorize("Expired", RED)
 
@@ -61,10 +60,20 @@ def fetch_csv(url):
         live_text(colorize(f"🚨 Error fetching CSV: {e}", RED))
         sys.exit(1)
 
+# ========== Get User Timezone ==========
+def get_user_timezone():
+    try:
+        res = requests.get("https://ipapi.co/json/", timeout=5)
+        res.raise_for_status()
+        tz_str = res.json().get("timezone")
+        return ZoneInfo(tz_str)
+    except Exception:
+        live_text(colorize("⚠️ Could not detect timezone. Defaulting to UTC.", YELLOW))
+        return ZoneInfo("UTC")
+
 # ========== Access Logic ==========
-def check_access(user_id, csv_text):
+def check_access(user_id, csv_text, now_ist, user_tz):
     reader = csv.DictReader(csv_text.splitlines())
-    now_ist = datetime.now(IST)
 
     for row in reader:
         row_id = row.get("id", "").strip().lower()
@@ -74,20 +83,26 @@ def check_access(user_id, csv_text):
             continue
 
         if row_id == "all":
-            return validate_access(expiry_dt, now_ist, "⏳ Free access expired!")
+            return validate_access(expiry_dt, now_ist, "⏳ Free access expired!", user_tz)
         elif row_id == user_id.lower():
-            return validate_access(expiry_dt, now_ist, "⏳ Your access has expired!")
+            return validate_access(expiry_dt, now_ist, "⏳ Your access has expired!", user_tz)
 
     deny_access("🚫 You are not authorized! Contact developer.")
 
-def validate_access(expiry_ist, now_ist, error_msg):
-    if now_ist > expiry_ist:
-        deny_access(error_msg)
-    else:
-        show_access_time(expiry_ist)
+def validate_access(expiry_dt, now_ist, error_msg, user_tz):
+    # If user is in IST, show the time normally
+    if user_tz == IST:
+        return show_access_time(expiry_dt, now_ist)
 
-def show_access_time(expiry_ist):
-    remaining = format_remaining_time(expiry_ist)
+    # If user is not in IST, adjust for time zone difference
+    expiry_local = expiry_dt.astimezone(user_tz)
+    remaining_local = format_remaining_time(expiry_local, now_ist)
+    live_text(colorize(f"\n✅ Access Granted! ({user_tz})", GREEN))
+    live_text(colorize(f"⏱ Time remaining: ", CYAN) + remaining_local)
+    print(colorize("🔓 Welcome to the system!", BOLD))
+
+def show_access_time(expiry_ist, now_ist):
+    remaining = format_remaining_time(expiry_ist, now_ist)
     live_text(colorize("\n✅ Access Granted!", GREEN))
     live_text(colorize("⏱ Time remaining: ", CYAN) + remaining)
     print(colorize("🔓 Welcome to the system!", BOLD))
@@ -108,9 +123,14 @@ def main():
     except NameError:
         user_id = input(colorize("🔐 Enter your ID: ", CYAN)).strip()
 
+    # Get user's real-time in IST (converted from their local time zone)
+    user_tz = get_user_timezone()
+    now_user_local = datetime.now(user_tz)
+    now_ist = now_user_local.astimezone(IST)
+
     csv_data = fetch_csv(CSV_URL)
     if csv_data:
-        check_access(user_id, csv_data)
+        check_access(user_id, csv_data, now_ist, user_tz)
 
 if __name__ == "__main__":
     main()
