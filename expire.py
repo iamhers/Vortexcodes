@@ -4,18 +4,23 @@ import webbrowser
 import sys
 import time
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
-# ========== Configuration ==========
+# ==================== Configuration ====================
 CSV_URL = "https://raw.githubusercontent.com/jaikshaikh/Vortexcodes/refs/heads/main/expiry_list.csv"
 CONTACT_URL = "https://t.me/PrayagRajj"
-IST = ZoneInfo("Asia/Kolkata")  # All expiry timestamps are in IST
-USE_COLOR = True
+USE_COLOR = True  # Set to False for plain terminal output
 
-# ========== Terminal Colors ==========
-def colorize(text, code): return f"\033[{code}m{text}\033[0m" if USE_COLOR else text
-RED, GREEN, YELLOW, CYAN, BOLD = "91", "92", "93", "96", "1"
+# ==================== Color Helper ====================
+def colorize(text, color_code):
+    return f"\033[{color_code}m{text}\033[0m" if USE_COLOR else text
 
+RED = "91"
+GREEN = "92"
+YELLOW = "93"
+CYAN = "96"
+BOLD = "1"
+
+# ==================== Typing Animation ====================
 def live_text(text, delay=0.03):
     for char in text:
         sys.stdout.write(char)
@@ -23,92 +28,82 @@ def live_text(text, delay=0.03):
         time.sleep(delay)
     print()
 
-# ========== Time Remaining Formatter ==========
-def format_remaining_time(expiry_ist, now_ist):
-    if expiry_ist <= now_ist:
+# ==================== Time Formatter ====================
+def format_remaining_time(expiry):
+    now = datetime.now()
+    if expiry <= now:
         return colorize("Expired", RED)
 
-    total_seconds = int((expiry_ist - now_ist).total_seconds())
-    days, rem = divmod(total_seconds, 86400)
-    hours, rem = divmod(rem, 3600)
-    minutes, seconds = divmod(rem, 60)
+    total_seconds = int((expiry - now).total_seconds())
+
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
 
     parts = []
-    if days: parts.append(f"{days} day{'s' if days != 1 else ''}")
-    if hours: parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if days:    parts.append(f"{days} day{'s' if days != 1 else ''}")
+    if hours:   parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
     if minutes: parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
     if seconds: parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+
     return colorize(", ".join(parts), GREEN)
 
-# ========== Parse Expiry (assumes IST in CSV) ==========
-def parse_expiry(date_str):
-    try:
-        naive = datetime.strptime(date_str.strip(), "%Y-%m-%d %H:%M:%S")
-        return naive.replace(tzinfo=IST)
-    except Exception:
-        live_text(colorize("🚨 Invalid expiry format! Use 'YYYY-MM-DD HH:MM:SS'", RED))
-        return None
-
-# ========== CSV Download ==========
+# ==================== CSV Fetching ====================
 def fetch_csv(url):
     try:
         live_text(colorize("📡 Fetching access list...", YELLOW))
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        return r.text
-    except requests.RequestException as e:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.RequestException as e:
         live_text(colorize(f"🚨 Error fetching CSV: {e}", RED))
         sys.exit(1)
 
-# ========== Get User Timezone ==========
-def get_user_timezone():
+# ==================== Expiry Parser ====================
+def parse_expiry(date_str):
     try:
-        res = requests.get("https://ipapi.co/json/", timeout=5)
-        res.raise_for_status()
-        tz_str = res.json().get("timezone")
-        return ZoneInfo(tz_str)
-    except Exception:
-        live_text(colorize("⚠️ Could not detect timezone. Defaulting to UTC.", YELLOW))
-        return ZoneInfo("UTC")
+        return datetime.strptime(date_str.strip(), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        live_text(colorize("🚨 Invalid date format in CSV! Use 'YYYY-MM-DD HH:MM:SS'", RED))
+        return None
 
-# ========== Access Logic ==========
-def check_access(user_id, csv_text, now_ist, user_tz):
+# ==================== Access Check ====================
+def check_access(user_id, csv_text):
     reader = csv.DictReader(csv_text.splitlines())
+    now = datetime.now()
 
     for row in reader:
         row_id = row.get("id", "").strip().lower()
         expiry_str = row.get("expiry", "").strip()
-        expiry_dt = parse_expiry(expiry_str)
-        if not expiry_dt:
+        expiry_date = parse_expiry(expiry_str)
+        if not expiry_date:
             continue
 
         if row_id == "all":
-            return validate_access(expiry_dt, now_ist, "⏳ Free access expired!", user_tz)
-        elif row_id == user_id.lower():
-            return validate_access(expiry_dt, now_ist, "⏳ Your access has expired!", user_tz)
+            if now > expiry_date:
+                deny_access("⏳ Free access expired! Contact developer.")
+            else:
+                show_access_time(expiry_date)
+            return
+
+        if row_id == user_id.lower():
+            if now > expiry_date:
+                deny_access("⏳ Your access has expired! Contact developer.")
+            else:
+                show_access_time(expiry_date)
+            return
 
     deny_access("🚫 You are not authorized! Contact developer.")
 
-def validate_access(expiry_dt, now_ist, error_msg, user_tz):
-    # If user is in IST, show the time normally
-    if user_tz == IST:
-        return show_access_time(expiry_dt, now_ist)
-
-    # If user is not in IST, adjust for time zone difference
-    expiry_local = expiry_dt.astimezone(user_tz)
-    remaining_local = format_remaining_time(expiry_local, now_ist)
-    live_text(colorize(f"\n✅ Access Granted! ({user_tz})", GREEN))
-    live_text(colorize(f"⏱ Time remaining: ", CYAN) + remaining_local)
-    print(colorize("🔓 Welcome to the system!", BOLD))
-
-def show_access_time(expiry_ist, now_ist):
-    remaining = format_remaining_time(expiry_ist, now_ist)
+# ==================== Output Helpers ====================
+def show_access_time(expiry_date):
+    remaining = format_remaining_time(expiry_date)
     live_text(colorize("\n✅ Access Granted!", GREEN))
-    live_text(colorize("⏱ Time remaining: ", CYAN) + remaining)
-    print(colorize("🔓 Welcome to the system!", BOLD))
+    live_text(colorize("⏱️ Time remaining: ", CYAN) + remaining)
+    print(colorize("🔓 Welcome to Vortex Tool!", BOLD))
 
-def deny_access(msg):
-    live_text(colorize(f"\n{msg}", RED))
+def deny_access(message):
+    live_text(colorize(f"\n{message}", RED))
     live_text(colorize(f"📩 Contact: {CONTACT_URL}", CYAN))
     try:
         webbrowser.open(CONTACT_URL)
@@ -116,21 +111,16 @@ def deny_access(msg):
         pass
     sys.exit(1)
 
-# ========== Main ==========
+# ==================== Main Logic ====================
 def main():
     try:
         user_id = str(ID)
     except NameError:
         user_id = input(colorize("🔐 Enter your ID: ", CYAN)).strip()
 
-    # Get user's real-time in IST (converted from their local time zone)
-    user_tz = get_user_timezone()
-    now_user_local = datetime.now(user_tz)
-    now_ist = now_user_local.astimezone(IST)
-
     csv_data = fetch_csv(CSV_URL)
     if csv_data:
-        check_access(user_id, csv_data, now_ist, user_tz)
+        check_access(user_id, csv_data)
 
 if __name__ == "__main__":
     main()
