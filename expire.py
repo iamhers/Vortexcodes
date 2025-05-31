@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 # ==================== Configuration ====================
-CSV_URL = "https://raw.githubusercontent.com/jaikshaikh/Vortexcodes/refs/heads/main/expiry_list.csv"
+CSV_URL = "https://github.com/iamhers/Vortexcodes/blob/main/expiry_list.csv"
 CONTACT_URL = "https://t.me/PrayagRajj"
 USE_COLOR = True  # Set to False for plain terminal output
 
